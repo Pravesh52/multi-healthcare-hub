@@ -1,0 +1,15 @@
+{
+  "Madhya Pradesh": [
+    "Agar Malwa", "Alirajpur", "Anuppur", "Ashoknagar", "Balaghat", "Barwani", "Betul", "Bhind",
+    "Bhopal", "Burhanpur", "Chhatarpur", "Chhindwara", "Damoh", "Datia", "Dewas", "Dhar",
+    "Dindori", "Guna", "Gwalior", "Harda", "Indore", "Jabalpur", "Jhabua", "Katni", "Khandwa",
+    "Khargone", "Maihar", "Mandla", "Mandsaur", "Mauganj", "Morena", "Narmadapuram", "Narsinghpur",
+    "Neemuch", "Niwari", "Pandhurna", "Panna", "Raisen", "Rajgarh", "Ratlam", "Rewa", "Sagar",
+    "Satna", "Sehore", "Seoni", "Shahdol", "Shajapur", "Sheopur", "Shivpuri", "Sidhi", "Singrauli",
+    "Tikamgarh", "Ujjain", "Umaria", "Vidisha"
+  ],
+  "Chhattisgarh": ["Bilaspur", "Durg", "Korba", "Raipur", "Rajnandgaon"],
+  "Maharashtra": ["Mumbai", "Nagpur", "Nashik", "Pune", "Thane"],
+  "Rajasthan": ["Ajmer", "Jaipur", "Jodhpur", "Kota", "Udaipur"],
+  "Uttar Pradesh": ["Agra", "Kanpur Nagar", "Lucknow", "Prayagraj", "Varanasi"]
+}
