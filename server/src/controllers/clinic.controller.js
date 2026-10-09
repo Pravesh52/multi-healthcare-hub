@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { ROLES, VERIFICATION } from '../utils/constants.js';
+import { cached } from '../services/cache.service.js';
 
 const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const exact = (s) => new RegExp(`^${escape(s)}$`, 'i');
@@ -25,54 +26,60 @@ const attachDoctors = async (clinics) => {
 };
 
 export const listClinics = asyncHandler(async (req, res) => {
-  const { state, district, q, type, lat, lng, km, page, limit } = req.query;
+  const key = `clinics:${JSON.stringify(req.query)}`;
 
-  const match = { status: VERIFICATION.VERIFIED };
-  if (state) match.state = exact(state);
-  if (district) match.district = exact(district);
-  if (type) match.type = type;
-  if (q) match.name = contains(q);
+  const body = await cached(key, 60, async () => {
+    const { state, district, q, type, lat, lng, km, page, limit } = req.query;
 
-  const skip = (page - 1) * limit;
-  let clinics;
-  let total;
+    const match = { status: VERIFICATION.VERIFIED };
+    if (state) match.state = exact(state);
+    if (district) match.district = exact(district);
+    if (type) match.type = type;
+    if (q) match.name = contains(q);
 
-  if (lat != null && lng != null) {
-    // "Near me": nearest first, with distance in meters
-    const result = await Clinic.aggregate([
-      {
-        $geoNear: {
-          near: { type: 'Point', coordinates: [lng, lat] },
-          distanceField: 'distanceMeters',
-          maxDistance: km * 1000,
-          spherical: true,
-          query: match,
+    const skip = (page - 1) * limit;
+    let clinics;
+    let total;
+
+    if (lat != null && lng != null) {
+      // "Near me": nearest first, with distance in meters
+      const result = await Clinic.aggregate([
+        {
+          $geoNear: {
+            near: { type: 'Point', coordinates: [lng, lat] },
+            distanceField: 'distanceMeters',
+            maxDistance: km * 1000,
+            spherical: true,
+            query: match,
+          },
         },
-      },
-      { $project: { licenceUrl: 0, owner: 0, rejectReason: 0 } },
-      {
-        $facet: {
-          items: [{ $skip: skip }, { $limit: limit }],
-          count: [{ $count: 'n' }],
+        { $project: { licenceUrl: 0, owner: 0, rejectReason: 0 } },
+        {
+          $facet: {
+            items: [{ $skip: skip }, { $limit: limit }],
+            count: [{ $count: 'n' }],
+          },
         },
-      },
-    ]);
-    clinics = result[0].items;
-    total = result[0].count[0]?.n || 0;
-  } else {
-    [clinics, total] = await Promise.all([
-      Clinic.find(match).select(PUBLIC_HIDE).sort({ ratingAvg: -1, name: 1 }).skip(skip).limit(limit).lean(),
-      Clinic.countDocuments(match),
-    ]);
-  }
+      ]);
+      clinics = result[0].items;
+      total = result[0].count[0]?.n || 0;
+    } else {
+      [clinics, total] = await Promise.all([
+        Clinic.find(match).select(PUBLIC_HIDE).sort({ ratingAvg: -1, name: 1 }).skip(skip).limit(limit).lean(),
+        Clinic.countDocuments(match),
+      ]);
+    }
 
-  res.json({
-    success: true,
-    total,
-    page,
-    pages: Math.ceil(total / limit),
-    clinics: await attachDoctors(clinics),
+    return {
+      success: true,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+      clinics: await attachDoctors(clinics),
+    };
   });
+
+  res.json(body);
 });
 
 export const getClinic = asyncHandler(async (req, res) => {

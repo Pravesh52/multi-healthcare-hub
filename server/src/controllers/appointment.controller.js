@@ -9,6 +9,10 @@ import { getDaySlots } from '../services/slot.service.js';
 import { notifyUser } from '../services/notify.service.js';
 import { todayIST, slotDateTime } from '../utils/time.js';
 import { queueEvents } from '../services/queue.service.js';
+import { scheduleReminder, cancelReminder } from '../jobs/queues.js';
+import { refund } from '../services/payment.service.js';
+import logger from '../utils/logger.js';
+
 
 const HOUR = 60 * 60 * 1000;
 const MAX_PENDING_PER_PATIENT = 5;
@@ -151,6 +155,18 @@ export const cancel = asyncHandler(async (req, res) => {
   );
   if (!updated) throw ApiError.conflict('This appointment was just updated. Please refresh');
 
+    await cancelReminder(appt._id);
+
+  // If the patient already paid online, give the money back
+  if (appt.payment?.status === 'paid' && appt.payment.razorpayPaymentId) {
+    try {
+      await refund(appt.payment.razorpayPaymentId, appt.payment.amount);
+      await Appointment.updateOne({ _id: appt._id }, { $set: { 'payment.status': 'refunded' } });
+    } catch (err) {
+      logger.error(`Refund failed for appointment ${appt._id}: ${err.message}`);
+    }
+  }
+
   const doctor = await Doctor.findById(appt.doctor).select('user');
   if (doctor) {
     await notifyUser(doctor.user, {
@@ -245,6 +261,8 @@ export const approve = asyncHandler(async (req, res) => {
     },
     { sms: true }
   );
+
+    await scheduleReminder(updated);
 
     queueEvents.emit('changed', { doctorId: String(doctor._id), date: appt.date });
 

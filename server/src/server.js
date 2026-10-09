@@ -5,6 +5,7 @@ import { env } from './config/env.js';
 import { connectDB } from './config/db.js';
 import { redis, connectRedis } from './config/redis.js';
 import { initSocket } from './sockets/index.js';
+import { startWorkers } from './jobs/worker.js';
 import logger from './utils/logger.js';
 
 const server = http.createServer(app);
@@ -17,6 +18,7 @@ const start = async () => {
     logger.info(`Server running on http://localhost:${env.PORT} (${env.NODE_ENV})`);
     logger.info('Socket.io ready');
   });
+  if (env.runJobs) await startWorkers();
 };
 
 start().catch((err) => {
@@ -26,7 +28,6 @@ start().catch((err) => {
 
 const shutdown = (signal) => {
   logger.warn(`${signal} received. Shutting down...`);
-  // io.close() also closes the HTTP server
   io.close(async () => {
     await mongoose.connection.close();
     redis.disconnect();

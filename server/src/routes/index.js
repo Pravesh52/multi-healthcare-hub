@@ -9,6 +9,7 @@ import adminRoutes from './admin.routes.js';
 import appointmentRoutes from './appointment.routes.js';
 import queueRoutes from './queue.routes.js';
 import receiptRoutes from './receipt.routes.js';
+import paymentRoutes from './payment.routes.js';
 
 const router = Router();
 
@@ -30,7 +31,8 @@ router.use('/admin', adminRoutes);
 router.use('/appointments', appointmentRoutes);
 router.use('/queue', queueRoutes);
 router.use('/receipts', receiptRoutes);
+router.use('/payments', paymentRoutes);
 
-// Next steps will mount: /payments, /prescriptions, /reviews ...
+// Next steps will mount: /prescriptions, /reviews, /notifications ...
 
 export default router;

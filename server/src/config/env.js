@@ -18,6 +18,8 @@ const schema = z.object({
 
   OTP_DEV_MODE: z.enum(['true', 'false']).default('true'),
 
+ JOBS_IN_SERVER: z.enum(['true', 'false']).default('true'),
+
   RAZORPAY_KEY_ID: z.string().default(''),
   RAZORPAY_KEY_SECRET: z.string().default(''),
   RAZORPAY_WEBHOOK_SECRET: z.string().default(''),
@@ -41,4 +43,5 @@ export const env = {
   ...parsed.data,
   isProd: parsed.data.NODE_ENV === 'production',
   otpDevMode: parsed.data.OTP_DEV_MODE === 'true',
+    runJobs: parsed.data.JOBS_IN_SERVER === 'true',
 };
