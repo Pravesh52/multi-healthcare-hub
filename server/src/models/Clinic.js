@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { VERIFICATION } from '../utils/constants.js';
+const photoSchema = new mongoose.Schema({ url: String, publicId: String }, { _id: false });
 
 const clinicSchema = new mongoose.Schema(
   {
@@ -33,8 +34,8 @@ const clinicSchema = new mongoose.Schema(
       offDays: { type: [Number], default: [] }, // 0 = Sunday ... 6 = Saturday
     },
 
-    photos: [String],
-    licenceUrl: String,
+       photos: [photoSchema],
+    licence: { publicId: String, format: String, uploadedAt: Date }, // private, only admin can open
 
     status: { type: String, enum: Object.values(VERIFICATION), default: VERIFICATION.PENDING },
     rejectReason: String,

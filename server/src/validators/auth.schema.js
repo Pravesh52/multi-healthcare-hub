@@ -9,7 +9,10 @@ const password = z
   .regex(/[A-Za-z]/, 'Password must contain a letter')
   .regex(/\d/, 'Password must contain a number');
 const gender = z.enum(['male', 'female', 'other']);
-const consent = z.boolean().refine((v) => v === true, 'You must accept the privacy policy');
+const consent = z
+  .union([z.boolean(), z.enum(['true', 'false'])])
+  .transform((v) => v === true || v === 'true')
+  .refine((v) => v === true, 'You must accept the privacy policy');
 const name = z.string().trim().min(2, 'Name is too short').max(80);
 
 export const sendOtpSchema = z.object({ body: z.object({ phone }) });
@@ -65,4 +68,8 @@ export const clinicSignupSchema = z.object({
     closeTime: z.string().regex(/^\d{2}:\d{2}$/).default('17:00'),
     consent,
   }),
+});
+
+export const resubmitSchema = z.object({
+  body: z.object({ email, password: z.string().min(1, 'Password is required') }),
 });

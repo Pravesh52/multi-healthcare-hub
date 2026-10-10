@@ -10,8 +10,7 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const exact = (s) => new RegExp(`^${escape(s)}$`, 'i');
 const contains = (s) => new RegExp(escape(s), 'i');
 
-const PUBLIC_HIDE = '-licenceUrl -owner -rejectReason';
-
+const PUBLIC_HIDE = '-licence -owner -rejectReason';
 // Adds the list of verified doctors to each clinic (for the clinic cards)
 const attachDoctors = async (clinics) => {
   const ids = clinics.map((c) => c._id);
@@ -53,7 +52,7 @@ export const listClinics = asyncHandler(async (req, res) => {
             query: match,
           },
         },
-        { $project: { licenceUrl: 0, owner: 0, rejectReason: 0 } },
+               { $project: { licence: 0, owner: 0, rejectReason: 0 } },
         {
           $facet: {
             items: [{ $skip: skip }, { $limit: limit }],

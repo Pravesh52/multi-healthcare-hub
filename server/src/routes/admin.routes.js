@@ -13,6 +13,8 @@ import {
   verifyClinic,
   rejectClinic,
 } from '../controllers/admin.controller.js';
+import { doctorCertificate, clinicLicence } from '../controllers/upload.controller.js';
+
 
 const router = Router();
 
@@ -23,6 +25,9 @@ const reasonSchema = z.object({
 });
 
 router.get('/stats', getStats);
+// Private documents (a 5 minute link; every look is recorded in the audit log)
+router.get('/doctors/:id/certificate', doctorCertificate);
+router.get('/clinics/:id/licence', clinicLicence);
 
 router.get('/doctors', listDoctors); // ?status=pending|verified|rejected
 router.patch('/doctors/:id/verify', verifyDoctor);

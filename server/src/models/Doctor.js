@@ -22,8 +22,9 @@ const doctorSchema = new mongoose.Schema(
     fees: { type: Number, min: 0, required: true },
     slotMinutes: { type: Number, default: 20, min: 5, max: 120 },
     bio: { type: String, maxlength: 500 },
-    photo: String,
-    certificateUrl: String,
+        photo: String, // public link (shown in search)
+    photoPublicId: String,
+    certificate: { publicId: String, format: String, uploadedAt: Date }, // private, only admin can open
 
     schedule: [scheduleSchema],
     leaveDates: [String], // 'YYYY-MM-DD'

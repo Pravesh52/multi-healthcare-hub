@@ -9,7 +9,7 @@ const escape = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const exact = (s) => new RegExp(`^${escape(s)}$`, 'i');
 const contains = (s) => new RegExp(escape(s), 'i');
 
-const PUBLIC_HIDE = '-certificateUrl -medRegNo -rejectReason';
+const PUBLIC_HIDE = '-certificate -photoPublicId -medRegNo -rejectReason';
 const CLINIC_FIELDS = 'name type address state district timings location phone';
 
 export const listDoctors = asyncHandler(async (req, res) => {

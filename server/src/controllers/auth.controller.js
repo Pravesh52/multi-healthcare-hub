@@ -14,6 +14,8 @@ import {
   clearRefreshCookie,
 } from '../services/token.service.js';
 
+import { uploadBuffer, deleteAsset } from '../services/upload.service.js';
+
 // ---------- Patient: OTP ----------
 export const sendOtp = asyncHandler(async (req, res) => {
   await sendOtpCode(req.body.phone);
@@ -49,21 +51,54 @@ export const verifyOtp = asyncHandler(async (req, res) => {
   res.status(isNew ? 201 : 200).json({ success: true, accessToken, user, isNew });
 });
 
-// ---------- Doctor signup ----------
+// ---------- Doctor signup (certificate is uploaded together) ----------
 export const doctorSignup = asyncHandler(async (req, res) => {
   const { name, email, password, phone, gender, speciality, qualification, medRegNo, experienceYears, fees } = req.body;
+
+  const certFile = req.files?.certificate?.[0];
+  const photoFile = req.files?.photo?.[0];
+  if (!certFile) throw ApiError.badRequest('Please upload your medical certificate (JPG, PNG or PDF)');
 
   if (await User.exists({ email })) throw ApiError.conflict('This email is already registered');
   if (await Doctor.exists({ medRegNo })) throw ApiError.conflict('This medical registration number is already registered');
 
-  const user = new User({ name, email, phone, gender, role: ROLES.DOCTOR, consentAt: new Date() });
-  await user.setPassword(password);
-  await user.save();
-
+  const uploaded = []; // remembered so a failed signup leaves nothing behind in Cloudinary
   try {
-    await Doctor.create({ user: user._id, gender, speciality, qualification, medRegNo, experienceYears, fees });
+    const cert = await uploadBuffer(certFile.buffer, { folder: 'doctor-certificates', isPrivate: true });
+    uploaded.push({ id: cert.public_id, isPrivate: true });
+
+    let photo;
+    let photoPublicId;
+    if (photoFile) {
+      const p = await uploadBuffer(photoFile.buffer, { folder: 'doctor-photos' });
+      uploaded.push({ id: p.public_id, isPrivate: false });
+      photo = p.secure_url;
+      photoPublicId = p.public_id;
+    }
+
+    const user = new User({ name, email, phone, gender, role: ROLES.DOCTOR, consentAt: new Date() });
+    await user.setPassword(password);
+    await user.save();
+
+    try {
+      await Doctor.create({
+        user: user._id,
+        gender,
+        speciality,
+        qualification,
+        medRegNo,
+        experienceYears,
+        fees,
+        photo,
+        photoPublicId,
+        certificate: { publicId: cert.public_id, format: cert.format, uploadedAt: new Date() },
+      });
+    } catch (err) {
+      await User.deleteOne({ _id: user._id }); // don't leave a half-created account
+      throw err;
+    }
   } catch (err) {
-    await User.deleteOne({ _id: user._id }); // don't leave a half-created account
+    await Promise.all(uploaded.map((u) => deleteAsset(u.id, u.isPrivate)));
     throw err;
   }
 
@@ -73,33 +108,55 @@ export const doctorSignup = asyncHandler(async (req, res) => {
   });
 });
 
-// ---------- Clinic signup ----------
+// ---------- Clinic signup (licence is uploaded together) ----------
 export const clinicSignup = asyncHandler(async (req, res) => {
   const b = req.body;
+
+  const licenceFile = req.files?.licence?.[0];
+  const photoFiles = req.files?.photos || [];
+  if (!licenceFile) throw ApiError.badRequest('Please upload your clinic licence (JPG, PNG or PDF)');
 
   if (await User.exists({ email: b.email })) throw ApiError.conflict('This email is already registered');
   if (await Clinic.exists({ regNo: b.regNo })) throw ApiError.conflict('This registration number is already registered');
 
-  const user = new User({ name: b.name, email: b.email, role: ROLES.CLINIC, consentAt: new Date() });
-  await user.setPassword(b.password);
-  await user.save();
-
+  const uploaded = [];
   try {
-    await Clinic.create({
-      owner: user._id,
-      name: b.clinicName,
-      type: b.type,
-      regNo: b.regNo,
-      phone: b.phone,
-      address: b.address,
-      state: b.state,
-      district: b.district,
-      pincode: b.pincode,
-      location: { type: 'Point', coordinates: [b.lng, b.lat] },
-      timings: { open: b.openTime, close: b.closeTime },
-    });
+    const lic = await uploadBuffer(licenceFile.buffer, { folder: 'clinic-licences', isPrivate: true });
+    uploaded.push({ id: lic.public_id, isPrivate: true });
+
+    const photos = [];
+    for (const f of photoFiles) {
+      const p = await uploadBuffer(f.buffer, { folder: 'clinic-photos' });
+      uploaded.push({ id: p.public_id, isPrivate: false });
+      photos.push({ url: p.secure_url, publicId: p.public_id });
+    }
+
+    const user = new User({ name: b.name, email: b.email, role: ROLES.CLINIC, consentAt: new Date() });
+    await user.setPassword(b.password);
+    await user.save();
+
+    try {
+      await Clinic.create({
+        owner: user._id,
+        name: b.clinicName,
+        type: b.type,
+        regNo: b.regNo,
+        phone: b.phone,
+        address: b.address,
+        state: b.state,
+        district: b.district,
+        pincode: b.pincode,
+        location: { type: 'Point', coordinates: [b.lng, b.lat] },
+        timings: { open: b.openTime, close: b.closeTime },
+        photos,
+        licence: { publicId: lic.public_id, format: lic.format, uploadedAt: new Date() },
+      });
+    } catch (err) {
+      await User.deleteOne({ _id: user._id });
+      throw err;
+    }
   } catch (err) {
-    await User.deleteOne({ _id: user._id });
+    await Promise.all(uploaded.map((u) => deleteAsset(u.id, u.isPrivate)));
     throw err;
   }
 
@@ -107,6 +164,56 @@ export const clinicSignup = asyncHandler(async (req, res) => {
     success: true,
     message: 'Signup received. Your clinic will be listed after admin verification.',
   });
+});
+
+// ---------- Rejected doctor / clinic: send a new document (no login needed) ----------
+const resubmit = ({ role, Model, ownerKey, fileField, docKey, folder }) =>
+  asyncHandler(async (req, res) => {
+    const { email, password } = req.body;
+    const file = req.files?.[fileField]?.[0];
+    if (!file) throw ApiError.badRequest('Please upload the new document');
+
+    const user = await User.findOne({ email, role }).select('+passwordHash');
+    if (!user || !(await user.comparePassword(password))) throw ApiError.unauthorized('Invalid email or password');
+
+    const record = await Model.findOne({ [ownerKey]: user._id });
+    if (!record || record.status !== VERIFICATION.REJECTED) {
+      throw ApiError.conflict('Only a rejected application can be resubmitted');
+    }
+
+    const uploaded = await uploadBuffer(file.buffer, { folder, isPrivate: true });
+    const oldId = record[docKey]?.publicId;
+
+    record[docKey] = { publicId: uploaded.public_id, format: uploaded.format, uploadedAt: new Date() };
+    record.status = VERIFICATION.PENDING;
+    record.rejectReason = undefined;
+    try {
+      await record.save();
+    } catch (err) {
+      await deleteAsset(uploaded.public_id, true);
+      throw err;
+    }
+
+    await deleteAsset(oldId, true);
+    res.json({ success: true, message: 'Resubmitted. The admin will review your application again.' });
+  });
+
+export const doctorResubmit = resubmit({
+  role: ROLES.DOCTOR,
+  Model: Doctor,
+  ownerKey: 'user',
+  fileField: 'certificate',
+  docKey: 'certificate',
+  folder: 'doctor-certificates',
+});
+
+export const clinicResubmit = resubmit({
+  role: ROLES.CLINIC,
+  Model: Clinic,
+  ownerKey: 'owner',
+  fileField: 'licence',
+  docKey: 'licence',
+  folder: 'clinic-licences',
 });
 
 // ---------- Doctor / Clinic / Admin login (email + password) ----------
