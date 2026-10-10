@@ -9,6 +9,7 @@ import {
   listMineSchema,
   listForDoctorSchema,
   rejectSchema,
+  rescheduleSchema,
 } from '../validators/appointment.schema.js';
 import {
   createAppointment,
@@ -19,6 +20,7 @@ import {
   reject,
   getOne,
 } from '../controllers/appointment.controller.js';
+import { reschedule } from '../controllers/reschedule.controller.js';
 
 const router = Router();
 const patientOnly = [protect, authorize(ROLES.PATIENT)];
@@ -28,6 +30,7 @@ const doctorOnly = [protect, authorize(ROLES.DOCTOR)];
 router.post('/', ...patientOnly, validate(createAppointmentSchema), createAppointment);
 router.get('/me', ...patientOnly, validate(listMineSchema), listMine);
 router.patch('/:id/cancel', ...patientOnly, validate(idSchema), cancel);
+router.patch('/:id/reschedule', ...patientOnly, validate(rescheduleSchema), reschedule);
 
 // Doctor (must stay above '/:id')
 router.get('/doctor', ...doctorOnly, validate(listForDoctorSchema), listForDoctor);

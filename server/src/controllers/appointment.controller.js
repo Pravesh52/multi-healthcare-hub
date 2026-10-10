@@ -12,6 +12,8 @@ import { queueEvents } from '../services/queue.service.js';
 import { scheduleReminder, cancelReminder } from '../jobs/queues.js';
 import { refund } from '../services/payment.service.js';
 import logger from '../utils/logger.js';
+import { recordAccess } from '../middlewares/audit.js';
+import { finishReschedule } from './reschedule.controller.js';
 
 
 const HOUR = 60 * 60 * 1000;
@@ -196,7 +198,7 @@ export const listForDoctor = asyncHandler(async (req, res) => {
       .sort({ date: 1, slot: 1 })
       .skip((page - 1) * limit)
       .limit(limit)
-      .populate('patient', 'name age gender phone'),
+            .populate('patient', 'name age gender phone medical'),
     Appointment.countDocuments(filter),
   ]);
 
@@ -262,7 +264,7 @@ export const approve = asyncHandler(async (req, res) => {
     { sms: true }
   );
 
-    await scheduleReminder(updated);
+      if (updated.rescheduledFrom) await finishReschedule(updated); // cancels the old booking this one replaces
 
     queueEvents.emit('changed', { doctorId: String(doctor._id), date: appt.date });
 
@@ -317,6 +319,21 @@ export const getOne = asyncHandler(async (req, res) => {
   // Same message for "missing" and "not yours", so ids cannot be guessed
   if (!appt || !(await canView(req.user, appt))) throw ApiError.notFound('Appointment not found');
 
-  await appt.populate([...patientView, { path: 'patient', select: 'name age gender phone' }]);
-  res.json({ success: true, appointment: appt });
+  // Whenever staff (not the patient) opens an appointment, it is written to the audit log
+  if (req.user.role !== ROLES.PATIENT) {
+    recordAccess(req, {
+      action: 'VIEW_APPOINTMENT',
+      resourceType: 'Appointment',
+      resourceId: appt._id,
+      subject: appt.patient,
+    });
+  }
+
+  await appt.populate([...patientView, { path: 'patient', select: 'name age gender phone medical' }]);
+
+  // Allergies and medical history are only for the patient and the doctor
+  const data = appt.toObject();
+  if (![ROLES.PATIENT, ROLES.DOCTOR].includes(req.user.role) && data.patient) delete data.patient.medical;
+
+  res.json({ success: true, appointment: data });
 });

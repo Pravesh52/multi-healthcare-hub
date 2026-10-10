@@ -47,3 +47,10 @@ export const rejectSchema = z.object({
   params: z.object({ id: objectId }),
   body: z.object({ reason: z.string().trim().min(3, 'Please give a reason').max(300) }),
 });
+export const rescheduleSchema = z.object({
+  params: z.object({ id: objectId }),
+  body: z.object({
+    date,
+    slot: z.string().regex(/^\d{2}:\d{2}$/, 'Slot must be HH:mm'),
+  }),
+});

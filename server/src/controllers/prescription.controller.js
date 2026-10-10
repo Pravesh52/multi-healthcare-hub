@@ -6,6 +6,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import { APPOINTMENT_STATUS as ST, QUEUE_STATUS as QS, ROLES } from '../utils/constants.js';
 import { notifyUser } from '../services/notify.service.js';
 import { buildPrescriptionData, renderPrescriptionPdf } from '../services/prescription.service.js';
+import { recordAccess } from '../middlewares/audit.js';
 
 const LOCK_AFTER_MS = 24 * 60 * 60 * 1000; // a prescription cannot be edited after 24 hours
 
@@ -91,14 +92,19 @@ const loadAllowed = async (user, appointmentId) => {
 };
 
 export const getPrescription = asyncHandler(async (req, res) => {
-  const rx = await loadAllowed(req.user, req.params.appointmentId);
+    const rx = await loadAllowed(req.user, req.params.appointmentId);
+  if (req.user.role === ROLES.DOCTOR) {
+    recordAccess(req, { action: 'VIEW_PRESCRIPTION', resourceType: 'Prescription', resourceId: rx._id, subject: rx.patient });
+  }
   res.json({ success: true, prescription: await buildPrescriptionData(rx) });
 });
 
 export const downloadPdf = asyncHandler(async (req, res) => {
   const rx = await loadAllowed(req.user, req.params.appointmentId);
-  const data = await buildPrescriptionData(rx);
-  const pdf = await renderPrescriptionPdf(data);
+  if (req.user.role === ROLES.DOCTOR) {
+    recordAccess(req, { action: 'VIEW_PRESCRIPTION', resourceType: 'Prescription', resourceId: rx._id, subject: rx.patient });
+  }
+  const data = await buildPrescriptionData(rx);  const pdf = await renderPrescriptionPdf(data);
 
   const mode = req.query.download === '1' ? 'attachment' : 'inline';
   res.setHeader('Content-Type', 'application/pdf');

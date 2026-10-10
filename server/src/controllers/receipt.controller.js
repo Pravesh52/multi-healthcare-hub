@@ -1,7 +1,8 @@
 import Appointment from '../models/Appointment.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
-import { APPOINTMENT_STATUS as ST } from '../utils/constants.js';
+import { APPOINTMENT_STATUS as ST, ROLES } from '../utils/constants.js';
+import { recordAccess } from '../middlewares/audit.js';
 import { canView } from './appointment.controller.js';
 import { ensureReceipt, buildReceiptData, renderReceiptPdf } from '../services/receipt.service.js';
 
@@ -9,7 +10,9 @@ const load = async (req) => {
   const appt = await Appointment.findById(req.params.appointmentId);
   // Same message for "missing" and "not yours"
   if (!appt || !(await canView(req.user, appt))) throw ApiError.notFound('Appointment not found');
-
+  if (req.user.role !== ROLES.PATIENT) {
+    recordAccess(req, { action: 'VIEW_RECEIPT', resourceType: 'Appointment', resourceId: appt._id, subject: appt.patient });
+  }
   if (![ST.APPROVED, ST.COMPLETED].includes(appt.status)) {
     throw ApiError.forbidden('The receipt is available only after the doctor approves the appointment');
   }

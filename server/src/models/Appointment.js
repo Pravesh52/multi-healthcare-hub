@@ -14,7 +14,8 @@ const appointmentSchema = new mongoose.Schema(
     reason: { type: String, trim: true, maxlength: 300 },
     reports: [String],
     isWalkIn: { type: Boolean, default: false },
-
+    rescheduledFrom: { type: mongoose.Schema.Types.ObjectId, ref: 'Appointment' }, // set when this request replaces an approved one
+    rescheduleCount: { type: Number, default: 0 },
     status: { type: String, enum: Object.values(APPOINTMENT_STATUS), default: APPOINTMENT_STATUS.PENDING },
     rejectReason: String,
     approvedAt: Date,

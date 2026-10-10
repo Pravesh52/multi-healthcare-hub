@@ -11,6 +11,12 @@ const userSchema = new mongoose.Schema(
     passwordHash: { type: String, select: false },
     gender: { type: String, enum: ['male', 'female', 'other'] },
     age: { type: Number, min: 0, max: 120 },
+        // Medical profile (for patients). Doctors see this on the appointment.
+    medical: {
+      bloodGroup: { type: String, enum: ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'] },
+      allergies: { type: [String], default: [] },
+      conditions: { type: [String], default: [] },
+    },
     avatar: String,
     consentAt: Date,
     isActive: { type: Boolean, default: true },
