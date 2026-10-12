@@ -19,6 +19,7 @@ const prescriptionSchema = new mongoose.Schema(
     medicines: [medicineSchema],
     advice: { type: String, trim: true, maxlength: 1000 },
     followUpDate: String, // YYYY-MM-DD
+   followUpReminderSent: { type: Boolean, default: false },
   },
   { timestamps: true }
 );

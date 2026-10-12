@@ -48,4 +48,9 @@ export const cancelReminder = async (appointmentId) => {
 // Repeating job: safe to call on every start, it does not create duplicates
 export const scheduleRecurringJobs = async () => {
   await jobsQueue.upsertJobScheduler('expire-pending', { every: 10 * 60 * 1000 }, { name: 'expire-pending' });
+    await jobsQueue.upsertJobScheduler(
+    'follow-up-reminders',
+    { pattern: '0 9 * * *', tz: 'Asia/Kolkata' }, // every day at 9:00 AM IST
+    { name: 'follow-up-reminders' }
+  );
 };

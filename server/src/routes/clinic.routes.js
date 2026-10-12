@@ -16,6 +16,8 @@ import {
 import { z } from 'zod';
 import { acceptFiles } from '../middlewares/upload.js';
 import { addClinicPhoto, removeClinicPhoto } from '../controllers/upload.controller.js';
+import { clinicAnalytics } from '../controllers/analytics.controller.js';
+import { analyticsSchema } from '../validators/analytics.schema.js';
 
 
 const router = Router();
@@ -28,6 +30,8 @@ router.post('/me/photos', ...owner, acceptFiles([{ name: 'photo', maxCount: 1 }]
 router.delete('/me/photos/:index', ...owner, validate(indexSchema), removeClinicPhoto);
 // Clinic owner (must stay above '/:id')
 router.get('/me', ...owner, getMine);
+router.get('/me/analytics', ...owner, validate(analyticsSchema), clinicAnalytics);
+
 router.patch('/me', ...owner, validate(updateClinicSchema), updateMine);
 router.get('/me/doctors', ...owner, myDoctors);
 router.post('/me/doctors', ...owner, validate(addDoctorSchema), addDoctor);

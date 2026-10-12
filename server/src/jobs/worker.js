@@ -4,6 +4,9 @@ import logger from '../utils/logger.js';
 import { bullConnection, QUEUE_NAME, scheduleRecurringJobs } from './queues.js';
 import { processReminder } from './reminder.job.js';
 import { processExpire } from './expire.job.js';
+import { processFollowUps } from './followup.job.js';
+
+const QUIET = ['expire-pending', 'follow-up-reminders']; // logged only when they actually did something
 
 export const startWorkers = async () => {
   await scheduleRecurringJobs();
@@ -16,6 +19,8 @@ export const startWorkers = async () => {
           return processReminder(job);
         case 'expire-pending':
           return processExpire(job);
+        case 'follow-up-reminders':
+          return processFollowUps(job);
         default:
           logger.warn(`Unknown job: ${job.name}`);
       }
@@ -29,7 +34,7 @@ export const startWorkers = async () => {
   );
 
   worker.on('completed', (job, result) => {
-    if (job.name !== 'expire-pending' || result?.expired || result?.noShow) {
+    if (!QUIET.includes(job.name) || result?.expired || result?.noShow || result?.sent) {
       logger.info(`Job done: ${job.name} ${JSON.stringify(result)}`);
     }
   });

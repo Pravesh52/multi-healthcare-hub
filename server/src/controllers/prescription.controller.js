@@ -35,7 +35,7 @@ export const savePrescription = asyncHandler(async (req, res) => {
     if (Date.now() - rx.createdAt.getTime() > LOCK_AFTER_MS) {
       throw ApiError.conflict('This prescription is locked. It can be edited only within 24 hours of writing');
     }
-    rx.set({ diagnosis, medicines, advice, followUpDate });
+       rx.set({ diagnosis, medicines, advice, followUpDate, followUpReminderSent: false });
     await rx.save();
   } else {
     try {
