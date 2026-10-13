@@ -9,6 +9,9 @@ const reviewSchema = new mongoose.Schema(
     clinic: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic', required: true, index: true },
     rating: { type: Number, required: true, min: 1, max: 5 },
     comment: { type: String, trim: true, maxlength: 500 },
+        hidden: { type: Boolean, default: false }, // hidden by an admin (not shown, not counted in the rating)
+    hiddenReason: String,
+    hiddenAt: Date,
   },
   { timestamps: true }
 );

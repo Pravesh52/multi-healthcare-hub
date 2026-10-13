@@ -17,9 +17,11 @@ const schema = z.object({
   JWT_REFRESH_EXPIRES: z.string().default('7d'),
 
   OTP_DEV_MODE: z.enum(['true', 'false']).default('true'),
-
+  DEMO_MODE: z.enum(['true', 'false']).default('false'),
  JOBS_IN_SERVER: z.enum(['true', 'false']).default('true'),
-
+  ADMIN_EMAIL: z.string().default(''),
+  ADMIN_PASSWORD: z.string().default(''),
+  
   RAZORPAY_KEY_ID: z.string().default(''),
   RAZORPAY_KEY_SECRET: z.string().default(''),
   RAZORPAY_WEBHOOK_SECRET: z.string().default(''),
@@ -43,5 +45,8 @@ export const env = {
   ...parsed.data,
   isProd: parsed.data.NODE_ENV === 'production',
   otpDevMode: parsed.data.OTP_DEV_MODE === 'true',
+    demoMode: parsed.data.DEMO_MODE === 'true',
     runJobs: parsed.data.JOBS_IN_SERVER === 'true',
+
+
 };

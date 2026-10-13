@@ -9,6 +9,7 @@ export const VERIFICATION = Object.freeze({
   PENDING: 'pending',
   VERIFIED: 'verified',
   REJECTED: 'rejected',
+ SUSPENDED: 'suspended',
 });
 
 export const APPOINTMENT_STATUS = Object.freeze({

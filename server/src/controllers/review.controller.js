@@ -7,10 +7,10 @@ import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { APPOINTMENT_STATUS as ST } from '../utils/constants.js';
 
-// Rating is always recalculated from the reviews, so it can never drift out of sync
-const recompute = async (Model, field, id) => {
+// Rating is always recalculated from the visible reviews, so it can never drift out of sync
+export const recompute = async (Model, field, id) => {
   const [r] = await Review.aggregate([
-    { $match: { [field]: new mongoose.Types.ObjectId(String(id)) } },
+    { $match: { [field]: new mongoose.Types.ObjectId(String(id)), hidden: { $ne: true } } },
     { $group: { _id: null, avg: { $avg: '$rating' }, count: { $sum: 1 } } },
   ]);
   await Model.updateOne(
@@ -51,7 +51,7 @@ export const createReview = asyncHandler(async (req, res) => {
 const listFor = (field) =>
   asyncHandler(async (req, res) => {
     const { page, limit } = req.query;
-    const filter = { [field]: req.params.id };
+    const filter = { [field]: req.params.id, hidden: { $ne: true } };
 
     const [items, total] = await Promise.all([
       Review.find(filter)

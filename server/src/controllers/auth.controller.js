@@ -17,12 +17,33 @@ import {
 import { uploadBuffer, deleteAsset } from '../services/upload.service.js';
 
 // ---------- Patient: OTP ----------
+// export const sendOtp = asyncHandler(async (req, res) => {
+//   await sendOtpCode(req.body.phone);
+//   res.json({
+//     success: true,
+//     message: env.otpDevMode ? 'OTP generated. Check the server terminal (dev mode)' : 'OTP sent to your mobile',
+//   });
+// });
+
 export const sendOtp = asyncHandler(async (req, res) => {
-  await sendOtpCode(req.body.phone);
-  res.json({
+  const otp = await sendOtpCode(req.body.phone);
+
+  const body = {
     success: true,
-    message: env.otpDevMode ? 'OTP generated. Check the server terminal (dev mode)' : 'OTP sent to your mobile',
-  });
+    message: env.demoMode
+      ? 'OTP generated (demo mode)'
+      : env.otpDevMode
+      ? 'OTP generated. Check the server terminal (dev mode)'
+      : 'OTP sent to your mobile',
+  };
+
+  // Only in demo mode: show the OTP on the screen
+  if (env.demoMode) {
+    body.demoOtp = otp;
+    body.demoNotice = 'Demo mode: this OTP is shown here only for the demo.';
+  }
+
+  res.json(body);
 });
 
 export const verifyOtp = asyncHandler(async (req, res) => {
@@ -228,15 +249,19 @@ export const login = asyncHandler(async (req, res) => {
   if (user.role === ROLES.DOCTOR) {
     const doc = await Doctor.findOne({ user: user._id });
     if (!doc || doc.status !== VERIFICATION.VERIFIED) {
-      const why = doc?.status === VERIFICATION.REJECTED ? ` Reason: ${doc.rejectReason || 'not provided'}` : '';
-      throw ApiError.forbidden(`Your doctor account is ${doc?.status || 'not found'}.${why}`);
+      const why = [VERIFICATION.REJECTED, VERIFICATION.SUSPENDED].includes(doc?.status)
+        ? ` Reason: ${doc.rejectReason || 'not provided'}`
+        : '';
+              throw ApiError.forbidden(`Your doctor account is ${doc?.status || 'not found'}.${why}`);
     }
   }
   if (user.role === ROLES.CLINIC) {
     const clinic = await Clinic.findOne({ owner: user._id });
     if (!clinic || clinic.status !== VERIFICATION.VERIFIED) {
-      const why = clinic?.status === VERIFICATION.REJECTED ? ` Reason: ${clinic.rejectReason || 'not provided'}` : '';
-      throw ApiError.forbidden(`Your clinic account is ${clinic?.status || 'not found'}.${why}`);
+      const why = [VERIFICATION.REJECTED, VERIFICATION.SUSPENDED].includes(clinic?.status)
+        ? ` Reason: ${clinic.rejectReason || 'not provided'}`
+        : '';
+              throw ApiError.forbidden(`Your clinic account is ${clinic?.status || 'not found'}.${why}`);
     }
   }
 

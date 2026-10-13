@@ -6,6 +6,8 @@ import AuditLog from '../models/AuditLog.js';
 import ApiError from '../utils/ApiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { ROLES, VERIFICATION } from '../utils/constants.js';
+import Review from '../models/Review.js';
+import { todayIST } from '../utils/time.js';
 
 const logAction = (req, action, resourceType, resourceId, meta) =>
   AuditLog.create({
@@ -22,18 +24,53 @@ const statusFilter = (q) =>
   Object.values(VERIFICATION).includes(q.status) ? q.status : VERIFICATION.PENDING;
 
 export const getStats = asyncHandler(async (req, res) => {
-  const [patients, doctorsVerified, doctorsPending, clinicsVerified, clinicsPending, appointments] =
-    await Promise.all([
-      User.countDocuments({ role: ROLES.PATIENT }),
-      Doctor.countDocuments({ status: VERIFICATION.VERIFIED }),
-      Doctor.countDocuments({ status: VERIFICATION.PENDING }),
-      Clinic.countDocuments({ status: VERIFICATION.VERIFIED }),
-      Clinic.countDocuments({ status: VERIFICATION.PENDING }),
-      Appointment.countDocuments(),
-    ]);
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const V = VERIFICATION;
+
+  const [
+    patients,
+    newPatients7d,
+    disabledPatients,
+    doctorsVerified,
+    doctorsPending,
+    doctorsSuspended,
+    clinicsVerified,
+    clinicsPending,
+    clinicsSuspended,
+    appointments,
+    appointmentsToday,
+    hiddenReviews,
+  ] = await Promise.all([
+    User.countDocuments({ role: ROLES.PATIENT }),
+    User.countDocuments({ role: ROLES.PATIENT, createdAt: { $gte: weekAgo } }),
+    User.countDocuments({ role: ROLES.PATIENT, isActive: false }),
+    Doctor.countDocuments({ status: V.VERIFIED }),
+    Doctor.countDocuments({ status: V.PENDING }),
+    Doctor.countDocuments({ status: V.SUSPENDED }),
+    Clinic.countDocuments({ status: V.VERIFIED }),
+    Clinic.countDocuments({ status: V.PENDING }),
+    Clinic.countDocuments({ status: V.SUSPENDED }),
+    Appointment.countDocuments(),
+    Appointment.countDocuments({ date: todayIST() }),
+    Review.countDocuments({ hidden: true }),
+  ]);
+
   res.json({
     success: true,
-    stats: { patients, doctorsVerified, doctorsPending, clinicsVerified, clinicsPending, appointments },
+    stats: {
+      patients,
+      newPatients7d,
+      disabledPatients,
+      doctorsVerified,
+      doctorsPending,
+      doctorsSuspended,
+      clinicsVerified,
+      clinicsPending,
+      clinicsSuspended,
+      appointments,
+      appointmentsToday,
+      hiddenReviews,
+    },
   });
 });
 

@@ -1,9 +1,9 @@
 import AuditLog from '../models/AuditLog.js';
 import logger from '../utils/logger.js';
 
-// Usage: recordAccess(req, { action, resourceType, resourceId, subject })
-// subject = the patient whose data was looked at
-export const recordAccess = (req, { action, resourceType, resourceId, subject }) => {
+// Usage: recordAccess(req, { action, resourceType, resourceId, subject, meta })
+// subject = the person whose data was looked at or changed
+export const recordAccess = (req, { action, resourceType, resourceId, subject, meta }) => {
   AuditLog.create({
     actor: req.user._id,
     role: req.user.role,
@@ -12,5 +12,6 @@ export const recordAccess = (req, { action, resourceType, resourceId, subject })
     resourceId,
     subject,
     ip: req.ip,
+    meta,
   }).catch((err) => logger.error(`Audit log failed: ${err.message}`));
 };

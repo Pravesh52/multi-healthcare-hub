@@ -16,6 +16,7 @@ const coolKey = (phone) => `otp:cool:${phone}`;
 const hashOtp = (phone, otp) =>
   crypto.createHmac('sha256', env.JWT_ACCESS_SECRET).update(`${phone}:${otp}`).digest('hex');
 
+// Returns the OTP. The controller shows it to the user ONLY in demo mode.
 export const sendOtp = async (phone) => {
   const ok = await redis.set(coolKey(phone), '1', 'EX', COOLDOWN_SEC, 'NX');
   if (!ok) throw ApiError.tooMany(`Please wait ${COOLDOWN_SEC} seconds before requesting another OTP`);
@@ -24,7 +25,12 @@ export const sendOtp = async (phone) => {
   await redis.set(otpKey(phone), hashOtp(phone, otp), 'EX', OTP_TTL_SEC);
   await redis.del(triesKey(phone));
 
-  await sendSms(phone, `Your MultiHealth Care Hub OTP is ${otp}. It is valid for 5 minutes. Do not share it.`);
+  // In demo mode the OTP appears on the screen, so no SMS is sent
+  if (!env.demoMode) {
+    await sendSms(phone, `Your MultiHealth Care Hub OTP is ${otp}. It is valid for 5 minutes. Do not share it.`);
+  }
+
+  return otp;
 };
 
 export const verifyOtpCode = async (phone, otp) => {

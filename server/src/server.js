@@ -17,6 +17,10 @@ const start = async () => {
   server.listen(env.PORT, () => {
     logger.info(`Server running on http://localhost:${env.PORT} (${env.NODE_ENV})`);
     logger.info('Socket.io ready');
+        if (env.demoMode && env.isProd) {
+      logger.warn('DEMO MODE is ON: OTP is shown on screen. Turn it off (DEMO_MODE=false) before real use.');
+    }
+    
   });
   if (env.runJobs) await startWorkers();
 };
