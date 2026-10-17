@@ -14,6 +14,7 @@ import notificationRoutes from './notification.routes.js';
 import prescriptionRoutes from './prescription.routes.js';
 import reviewRoutes from './review.routes.js';
 import patientRoutes from './patient.routes.js';
+import statsRoutes from './stats.routes.js';
 
 const router = Router();
 
@@ -40,5 +41,6 @@ router.use('/notifications', notificationRoutes);
 router.use('/prescriptions', prescriptionRoutes);
 router.use('/reviews', reviewRoutes);
 router.use('/patients', patientRoutes);
+router.use('/stats', statsRoutes);
 
 export default router;

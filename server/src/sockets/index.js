@@ -38,6 +38,7 @@ export const initSocket = (httpServer) => {
     const { id, role } = socket.data.user;
 
     socket.join(`user:${id}`);
+     socket.join(`role:${role}`);
 
     // Staff also join the rooms of the queues they are allowed to see
     try {

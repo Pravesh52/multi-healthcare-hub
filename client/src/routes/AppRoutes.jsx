@@ -81,7 +81,7 @@ const AuditLogs = page(() => import('@/pages/admin/AuditLogs.jsx'));
 const AdminPassword = page(() => import('@/pages/admin/AdminPassword.jsx'));
 
 const NotificationsPage = page(() => import('@/pages/shared/NotificationsPage.jsx'));
-
+// const UiShowcase = page(() => import('@/pages/public/UiShowcase.jsx'));
 // ---------- layouts ----------
 function PublicLayout() {
   return (
@@ -249,6 +249,8 @@ export default function AppRoutes() {
           <Route path="resubmit" element={<ResubmitDocument />} />
 
           {import.meta.env.DEV && <Route path="dev" element={<DevCheck />} />}
+
+         {/* {import.meta.env.DEV && <Route path="dev/ui" element={<UiShowcase />} />} */}
           <Route path="*" element={<NotFound />} />
         </Route>
 

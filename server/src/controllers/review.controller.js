@@ -73,6 +73,30 @@ const listFor = (field) =>
 
     res.json({ success: true, total, page, pages: Math.ceil(total / limit), reviews });
   });
+// Latest visible reviews that have a comment (for the home page)
+export const recent = asyncHandler(async (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 6, 1), 12);
+
+  const items = await Review.find({ hidden: { $ne: true }, comment: { $exists: true, $nin: ['', null] } })
+    .sort({ createdAt: -1 })
+    .limit(limit)
+    .populate('patient', 'name')
+    .populate({ path: 'doctor', select: 'user', populate: { path: 'user', select: 'name' } })
+    .populate('clinic', 'name')
+    .lean();
+
+  const reviews = items.map((r) => ({
+    id: r._id,
+    rating: r.rating,
+    comment: r.comment,
+    name: (r.patient?.name || 'Patient').split(' ')[0], // first name only, for privacy
+    doctorName: r.doctor?.user?.name,
+    clinicName: r.clinic?.name,
+    createdAt: r.createdAt,
+  }));
+
+  res.json({ success: true, reviews });
+});
 
 export const listForDoctor = listFor('doctor');
 export const listForClinic = listFor('clinic');

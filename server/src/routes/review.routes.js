@@ -4,8 +4,7 @@ import protect from '../middlewares/auth.js';
 import authorize from '../middlewares/rbac.js';
 import validate from '../middlewares/validate.js';
 import { ROLES } from '../utils/constants.js';
-import { createReview, listForDoctor, listForClinic } from '../controllers/review.controller.js';
-
+import { createReview, listForDoctor, listForClinic, recent } from '../controllers/review.controller.js';
 const router = Router();
 const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'Invalid id');
 
@@ -26,6 +25,7 @@ const listSchema = z.object({
 });
 
 router.post('/', protect, authorize(ROLES.PATIENT), validate(createSchema), createReview);
+router.get('/recent', recent);
 router.get('/doctors/:id', validate(listSchema), listForDoctor);
 router.get('/clinics/:id', validate(listSchema), listForClinic);
 
