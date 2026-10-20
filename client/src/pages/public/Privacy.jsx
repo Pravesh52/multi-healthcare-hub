@@ -44,6 +44,7 @@ export default function Privacy() {
             'Blood group, allergies and past conditions, only if you add them.',
             'Your appointments, the reason you type for a visit, and prescriptions written by your doctor.',
             'Reviews you write.',
+                        'Your location, only when you press Near me or Use my location. It is used to find nearby clinics and is not saved in our database.',
           ]}
         />
         <p>
@@ -102,8 +103,7 @@ export default function Privacy() {
       <Section title="Other services we use">
         <p>
           To run the app we use services for the database, temporary data, file storage, SMS (for login codes), online
-          payments when they are turned on, and map tiles when a map is shown. They receive only what they need to do
-          their job.
+          payments when they are turned on,and map tiles and place-name lookup (OpenStreetMap) when a map is shown or your location is used.
         </p>
       </Section>
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { X } from 'lucide-react';
@@ -48,6 +48,16 @@ export default function Home() {
   const [coords, setCoords] = useState(null);
   const [tab, setTab] = useState('all');
   const [, setTick] = useState(0);
+    // The user already allowed location earlier: use it without asking again
+  const autoTried = useRef(false);
+  useEffect(() => {
+    if (autoTried.current || geo.permission !== 'granted') return;
+    autoTried.current = true;
+    geo.request().then((c) => {
+      if (c) setCoords(c);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [geo.permission]);
 
   useEffect(() => {
     document.title = `${APP_NAME} - Find nearby doctors, no waiting in line`;

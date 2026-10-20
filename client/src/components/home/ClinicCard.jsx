@@ -16,11 +16,17 @@ const TINTS = ['from-brand/20', 'from-ok/20', 'from-cross/15', 'from-warn/25', '
 const pickTint = (id = '') => TINTS[[...String(id)].reduce((a, c) => a + c.charCodeAt(0), 0) % TINTS.length];
 
 const formatDistance = (m) => (m < 1000 ? `${Math.max(10, Math.round(m / 10) * 10)} m` : `${(m / 1000).toFixed(1)} km`);
+const sortPreferred = (list = [], prefer = {}) => {
+  if (!prefer.speciality && !prefer.gender) return list;
+  const score = (d) =>
+    (prefer.speciality && d.speciality?.toLowerCase().includes(prefer.speciality.toLowerCase()) ? 2 : 0) +
+    (prefer.gender && d.gender === prefer.gender ? 1 : 0);
+  return [...list].sort((a, b) => score(b) - score(a));
+};
 
-export default function ClinicCard({ clinic }) {
+export default function ClinicCard({ clinic, prefer }) {
   const status = isOpenNow(clinic.timings);
-  const doctors = clinic.doctors || [];
-  const headDoctors = doctors.slice(0, 3);
+  const doctors = sortPreferred(clinic.doctors, prefer);  const headDoctors = doctors.slice(0, 3);
   const listed = doctors.slice(0, 2);
   const extra = doctors.length - listed.length;
   const specialities = [...new Set(doctors.map((d) => d.speciality).filter(Boolean))].slice(0, 2);
