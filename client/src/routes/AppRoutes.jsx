@@ -1,10 +1,7 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import useAuth from '@/hooks/useAuth.js';
-import useSocket from '@/hooks/useSocket.js';
-import api from '@/services/api.js';
-import { getErrorMessage, isSignupRequired } from '@/utils/apiError.js';
-import ProtectedRoute, { PageSplash } from './ProtectedRoute.jsx';
+import { PageSplash } from './ProtectedRoute.jsx';
 import RoleRoute from './RoleRoute.jsx';
 
 // ---------- helpers ----------
@@ -29,7 +26,7 @@ const part = (loader, Fallback) => lazy(() => loader().then((m) => ({ default: m
 const Nothing = () => null;
 const PassThrough = () => <Outlet />;
 
-// ---------- layout parts (built in Step 3) ----------
+// ---------- layout parts ----------
 const TopBar = part(() => import('@/components/layout/TopBar.jsx'), Nothing);
 const Navbar = part(() => import('@/components/layout/Navbar.jsx'), Nothing);
 const Footer = part(() => import('@/components/layout/Footer.jsx'), Nothing);
@@ -81,7 +78,7 @@ const AuditLogs = page(() => import('@/pages/admin/AuditLogs.jsx'));
 const AdminPassword = page(() => import('@/pages/admin/AdminPassword.jsx'));
 
 const NotificationsPage = page(() => import('@/pages/shared/NotificationsPage.jsx'));
-// const UiShowcase = page(() => import('@/pages/public/UiShowcase.jsx'));
+
 // ---------- layouts ----------
 function PublicLayout() {
   return (
@@ -102,7 +99,7 @@ function PublicLayout() {
   );
 }
 
-// Dashboards: the menu comes from DashboardLayout (Step 3), `area` tells it which menu
+// Dashboards: the menu comes from DashboardLayout, `area` tells it which menu
 function Dashboard({ area }) {
   return (
     <Suspense fallback={<PageSplash />}>
@@ -133,101 +130,6 @@ function ScrollToTop() {
   return null;
 }
 
-// ---------- TEMPORARY: /dev (development only). Removed once the real Login page exists (Step 6) ----------
-function DevCheck() {
-  const { user, profile, loading, sendOtp, verifyOtp, login, logout } = useAuth();
-  const { connected, unreadCount } = useSocket();
-  const [health, setHealth] = useState('checking...');
-  const [phone, setPhone] = useState('');
-  const [otp, setOtp] = useState('');
-  const [name, setName] = useState('');
-  const [needsName, setNeedsName] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [msg, setMsg] = useState('');
-
-  useEffect(() => {
-    api
-      .get('/health')
-      .then((r) => setHealth(`API ok. MongoDB: ${r.data.mongo}, Redis: ${r.data.redis}`))
-      .catch((e) => setHealth(getErrorMessage(e)));
-  }, []);
-
-  const run = (fn) => async () => {
-    setMsg('');
-    try {
-      await fn();
-    } catch (e) {
-      setMsg(getErrorMessage(e));
-    }
-  };
-
-  const send = run(async () => {
-    const d = await sendOtp(phone);
-    setMsg(d.demoOtp ? `${d.demoNotice} OTP: ${d.demoOtp}` : d.message);
-  });
-
-  const verify = async () => {
-    setMsg('');
-    try {
-      await verifyOtp({
-        phone,
-        otp,
-        ...(needsName ? { name, age: 30, gender: 'male', consent: true } : {}),
-      });
-    } catch (e) {
-      if (isSignupRequired(e)) {
-        setNeedsName(true);
-        setMsg('New number. Type a name and press Verify again to sign up.');
-      } else setMsg(getErrorMessage(e));
-    }
-  };
-
-  return (
-    <div className="container-page max-w-2xl space-y-4 py-8">
-      <h1 className="text-2xl font-bold">Developer check (temporary)</h1>
-
-      <div className="card space-y-1 text-sm">
-        <p>{health}</p>
-        <p>
-          Session: {loading ? 'checking...' : user ? `${user.name} (${user.role})` : 'not logged in'}
-        </p>
-        {profile && <p>Profile loaded: {profile.name || profile.speciality}</p>}
-        <p>
-          Socket: <b>{connected ? 'connected' : 'not connected'}</b> | Unread notifications: <b>{unreadCount}</b>
-        </p>
-        {user && (
-          <button className="btn btn-outline btn-sm mt-2" onClick={logout}>
-            Logout
-          </button>
-        )}
-      </div>
-
-      {!user && (
-        <>
-          <div className="card space-y-2">
-            <h2 className="font-bold">Patient (OTP)</h2>
-            <input className="input" placeholder="Mobile number" inputMode="numeric" value={phone} onChange={(e) => setPhone(e.target.value)} />
-            <button className="btn btn-outline btn-sm" onClick={send}>Send OTP</button>
-            <input className="input" placeholder="OTP" inputMode="numeric" value={otp} onChange={(e) => setOtp(e.target.value)} />
-            {needsName && <input className="input" placeholder="Your name" value={name} onChange={(e) => setName(e.target.value)} />}
-            <button className="btn btn-primary btn-sm" onClick={verify}>Verify</button>
-          </div>
-
-          <div className="card space-y-2">
-            <h2 className="font-bold">Doctor, clinic or admin (email)</h2>
-            <input className="input" type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-            <input className="input" type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <button className="btn btn-primary btn-sm" onClick={run(() => login({ email, password }))}>Login</button>
-          </div>
-        </>
-      )}
-
-      {msg && <p className="card text-sm font-medium text-brand">{msg}</p>}
-    </div>
-  );
-}
-
 // ---------- the routes ----------
 export default function AppRoutes() {
   return (
@@ -248,9 +150,6 @@ export default function AppRoutes() {
           <Route path="register/clinic" element={<ClinicRegister />} />
           <Route path="resubmit" element={<ResubmitDocument />} />
 
-          {import.meta.env.DEV && <Route path="dev" element={<DevCheck />} />}
-
-         {/* {import.meta.env.DEV && <Route path="dev/ui" element={<UiShowcase />} />} */}
           <Route path="*" element={<NotFound />} />
         </Route>
 
@@ -320,6 +219,3 @@ export default function AppRoutes() {
     </>
   );
 }
-
-// Kept so a page can wrap itself if needed
-export { ProtectedRoute };

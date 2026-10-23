@@ -28,13 +28,33 @@ export const listClinics = asyncHandler(async (req, res) => {
   const key = `clinics:${JSON.stringify(req.query)}`;
 
   const body = await cached(key, 60, async () => {
-    const { state, district, q, type, lat, lng, km, page, limit } = req.query;
+    const { state, district, q, type, speciality, gender, maxFees, lat, lng, km, page, limit } = req.query;
 
     const match = { status: VERIFICATION.VERIFIED };
     if (state) match.state = exact(state);
     if (district) match.district = exact(district);
     if (type) match.type = type;
-    if (q) match.name = contains(q);
+
+    // Doctor filters: only clinics that have a matching verified doctor
+    if (speciality || gender || maxFees != null) {
+      const df = { status: VERIFICATION.VERIFIED, clinic: { $exists: true } };
+      if (speciality) df.speciality = contains(speciality);
+      if (gender) df.gender = gender;
+      if (maxFees != null) df.fees = { $lte: maxFees };
+      match._id = { $in: await Doctor.distinct('clinic', df) };
+    }
+
+    // Text search: the clinic name, or the name or speciality of one of its doctors
+    if (q) {
+      const rx = contains(q);
+      const userIds = await User.distinct('_id', { role: ROLES.DOCTOR, name: rx });
+      const doctorClinics = await Doctor.distinct('clinic', {
+        status: VERIFICATION.VERIFIED,
+        clinic: { $exists: true },
+        $or: [{ speciality: rx }, { user: { $in: userIds } }],
+      });
+      match.$or = [{ name: rx }, { _id: { $in: doctorClinics } }];
+    }
 
     const skip = (page - 1) * limit;
     let clinics;
@@ -52,7 +72,7 @@ export const listClinics = asyncHandler(async (req, res) => {
             query: match,
           },
         },
-               { $project: { licence: 0, owner: 0, rejectReason: 0 } },
+        { $project: { licence: 0, owner: 0, rejectReason: 0 } },
         {
           $facet: {
             items: [{ $skip: skip }, { $limit: limit }],
