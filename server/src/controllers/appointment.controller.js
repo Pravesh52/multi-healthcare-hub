@@ -195,7 +195,7 @@ export const listForDoctor = asyncHandler(async (req, res) => {
 
   const [appointments, total] = await Promise.all([
     Appointment.find(filter)
-      .sort({ date: 1, slot: 1 })
+           .sort(['pending', 'approved'].includes(status) ? { date: 1, slot: 1 } : { date: -1, slot: -1 })
       .skip((page - 1) * limit)
       .limit(limit)
             .populate('patient', 'name age gender phone medical'),
