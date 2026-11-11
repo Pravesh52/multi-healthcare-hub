@@ -91,7 +91,7 @@ All routes start with `/api/v1`.
 
 ## Screenshots
 
-**Live demo:** https://YOUR-APP.vercel.app
+**Live demo:** https://multi-healthcare-hub.vercel.app/
 
 ### Find a nearby clinic
 ![Home page](docs/screenshots/home.png)
