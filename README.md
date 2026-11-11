@@ -87,3 +87,25 @@ All routes start with `/api/v1`.
 - Family members under one account
 - A real SMS provider for OTP, and HTTPS and deployment
 - Docker and CI
+
+
+## Screenshots
+
+**Live demo:** https://YOUR-APP.vercel.app
+
+### Find a nearby clinic
+![Home page](docs/screenshots/home.png)
+
+![Search with map](docs/screenshots/search-map.png)
+
+### Book a slot and follow the queue
+![Doctor page and slots](docs/screenshots/doctor-booking.png)
+
+<img src="docs/screenshots/patient-queue-mobile.png" alt="Live queue on mobile" width="300">
+
+### For doctors, clinics and admin
+![Doctor live queue](docs/screenshots/doctor-queue.png)
+
+![Clinic QR check-in](docs/screenshots/clinic-checkin.png)
+
+![Admin verification](docs/screenshots/admin-verify.png)
